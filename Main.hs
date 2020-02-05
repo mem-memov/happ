@@ -6,7 +6,7 @@ data App a = App {
   getAppState :: AppState
   , getAppConfiguration :: AppConfiguration
   , getAppError :: AppError
-}
+} | AppApplication a
 
 app :: App ()
 app = App ()
@@ -25,13 +25,14 @@ instance Functor App where
       result
 
 instance Applicative App where
+  pure ((->) x y) = AppApplication ()
   pure x = App x
-  (App f) (<*>) (App x) = 
+  (AppApplication f) <*> (App x) = 
     let 
       appConfiguration = getAppConfiguration x
       appError = getAppError x
       y = case appError of
-        AppNoError -> App (f x)
+        AppNoError -> pure (f x)
         AppError -> App x
       newAppConfiguration = getAppConfiguration y
       result = if newAppConfiguration == appConfiguration then y else x { getAppError = AppError }
@@ -39,7 +40,7 @@ instance Applicative App where
       result
 
 instance Monad App where
-  (App x) (>>=) f =
+  (App x) >>= f =
     let 
       appConfiguration = getAppConfiguration x
       appError = getAppError x
